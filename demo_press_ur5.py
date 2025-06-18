@@ -12,7 +12,7 @@ POSES = [
     ([  0.481,  0.136, -0.111,  2.889,  1.232,  0.001 ], 5.0, 0.0001, 0.01),
 ]
 HOLD_SEC    = 2.0
-RETURN_POSE = [0.563, 0.232, 0.083, -1.664, -0.857, -1.768]
+RETURN_POSE = [  0.480,  0.135, -0.061,  2.889,  1.232,  0.002 ]
 ROBOT_IP, PORT = "10.10.10.1", 50002
 TCP_OFFSET  = (0, 0, 0.26, 0, 0, 0)
 import sys, signal, time, glob, os
@@ -80,6 +80,7 @@ rtde_c = RTDEControlInterface(ROBOT_IP, PORT); rtde_c.setTcp(TCP_OFFSET)
 rtde_r = RTDEReceiveInterface(ROBOT_IP)
 print("✔  UR5 RTDE connection established.")
 def clean_exit(*_):
+    rtde_c.moveL(RETURN_POSE,0.25,0.2)
     print("\n[EXIT] Stopping robot & closing camera …")
     rtde_c.stopScript(); cam.release(); cv2.destroyAllWindows(); sys.exit(0)
 signal.signal(signal.SIGINT, clean_exit)
@@ -110,6 +111,7 @@ def predict_and_show():
 
     cv2.imshow("GelSight live (ensemble)", frame_bgr)
     if cv2.waitKey(1)&0xFF==ord('q'):
+        rtde_c.moveL(RETURN_POSE,0.25,0.2)
         raise KeyboardInterrupt
 
 def rotvec_to_R(rx, ry, rz):
