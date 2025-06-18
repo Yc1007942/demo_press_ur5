@@ -8,8 +8,8 @@ CAM_INDEX     = 0
 
 # ([x y z rx ry rz], depth_mm, speed_m_s, step_mm)
 POSES = [
-    ([0.635, 0.123, 0.024, -1.790, -0.678, -1.780], 6.0, 0.0001, 0.01),
-    ([0.625, 0.118, 0.031, -1.700, -0.800, -1.760], 5.0, 0.0001, 0.01),
+    ([  0.481,  0.136, -0.111,  2.889,  1.232,  0.001 ], 6.0, 0.001, 0.01),
+    ([  0.481,  0.136, -0.111,  2.889,  1.232,  0.001 ], 5.0, 0.0001, 0.01),
 ]
 HOLD_SEC    = 2.0
 RETURN_POSE = [0.563, 0.232, 0.083, -1.664, -0.857, -1.768]
@@ -41,7 +41,7 @@ class ModelWrapper:
             self.kind = "tf"
             self.m    = tf.keras.models.load_model(fp, compile=False)
             self.inp  = self.m.input_shape[1]
-            print(f" TF model ({self.inp}²) loaded from '{fp}'")
+            print(f"TF model ({self.inp}²) loaded from '{fp}'")
         elif ext == "pt":                             
             self.kind = "pt"
             chk = torch.load(fp, map_location="cpu")
@@ -54,7 +54,7 @@ class ModelWrapper:
             net.to(PT_DEVICE).eval()
             self.m   = net
             self.inp = DEFAULT_PT_IMG
-            print(f"PT model ({self.inp}²) loaded from '{fp}'")
+            print(f" PT model ({self.inp}²) loaded from '{fp}'")
         else:
             raise ValueError(f"Unsupported extension: {fp}")
     @torch.no_grad()
@@ -70,7 +70,7 @@ class ModelWrapper:
             logits = self.m(t)
             return F.softmax(logits,1).cpu().numpy()[0]
 WRAPPERS = [ModelWrapper(f) for f in MODEL_FILES]
-#print(f"Ensemble size: {len(WRAPPERS)}")
+print(f" Ensemble size: {len(WRAPPERS)}")
 cam = cv2.VideoCapture(CAM_INDEX, cv2.CAP_V4L2)
 if not cam.isOpened(): sys.exit("Cannot open camera.")
 cam.set(3,800); cam.set(4,600)
@@ -78,7 +78,7 @@ setting.init()
 print("Camera initialised.")
 rtde_c = RTDEControlInterface(ROBOT_IP, PORT); rtde_c.setTcp(TCP_OFFSET)
 rtde_r = RTDEReceiveInterface(ROBOT_IP)
-print(" UR5 RTDE connection established.")
+print("✔  UR5 RTDE connection established.")
 def clean_exit(*_):
     print("\n[EXIT] Stopping robot & closing camera …")
     rtde_c.stopScript(); cam.release(); cv2.destroyAllWindows(); sys.exit(0)
@@ -111,11 +111,14 @@ def predict_and_show():
     cv2.imshow("GelSight live (ensemble)", frame_bgr)
     if cv2.waitKey(1)&0xFF==ord('q'):
         raise KeyboardInterrupt
+
 def rotvec_to_R(rx, ry, rz):
     v=np.asarray([rx,ry,rz]); th=np.linalg.norm(v)
     if th<1e-9: return np.eye(3)
     k=v/th; K=np.array([[0,-k[2],k[1]],[k[2],0,-k[0]],[-k[1],k[0],0]])
     return np.eye(3)+np.sin(th)*K+(1-np.cos(th))*K@K
+
+# ─────── Main press loop ───────
 print(f"[DEMO] {len(POSES)} press positions queued.")
 for idx,(pose,depth,speed,step) in enumerate(POSES,1):
     print(f"\n► Pose {idx}: depth {depth} mm, speed {speed} m/s, step {step} mm")
